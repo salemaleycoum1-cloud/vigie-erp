@@ -23,7 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </a>
             <div className="flex items-center gap-4">
               <nav className="text-sm text-slate-500">
-                Suivi des vérifications incendie — ERP M/N
+                Suivi des vérifications incendie
               </nav>
               {session && <BoutonDeconnexion />}
             </div>
