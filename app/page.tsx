@@ -19,7 +19,7 @@ async function getEtablissements() {
           AND ech.prochaine_echeance <= CURRENT_DATE + INTERVAL '30 days'
         ) AS echeances_a_venir
       FROM etablissements e
-      LEFT JOIN echeances ech ON ech.etablissement_id = e.id
+      INNER JOIN echeances ech ON ech.etablissement_id = e.id
       GROUP BY e.id
       ORDER BY e.created_at DESC
     `;
