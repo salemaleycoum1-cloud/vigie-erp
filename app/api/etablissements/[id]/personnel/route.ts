@@ -2,12 +2,19 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '../../../../../lib/db';
-import { peutEcrireEtablissement } from '../../../../../lib/acces';
+import { raisonRefusEcriture } from '../../../../../lib/acces';
 
 // POST /api/etablissements/[id]/personnel — ajoute un membre du personnel
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const idNum = parseInt(params.id, 10);
-  if (!(await peutEcrireEtablissement(idNum))) {
+  const raison = await raisonRefusEcriture(idNum);
+  if (raison === 'essai_expire') {
+    return NextResponse.json(
+      { error: 'Votre période d\'essai est terminée. Abonnez-vous pour continuer à modifier vos données.', code: 'ESSAI_EXPIRE' },
+      { status: 403 }
+    );
+  }
+  if (raison === 'interdit') {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
   try {

@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '../../../../../lib/db';
-import { etablissementIdDepuisEquipement, peutLireEtablissement, peutEcrireEtablissement } from '../../../../../lib/acces';
+import { etablissementIdDepuisEquipement, peutLireEtablissement, raisonRefusEcriture } from '../../../../../lib/acces';
 
 // GET /api/equipements/[id]/controles — types de contrôle applicables + historique
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
@@ -41,7 +41,17 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const idNum2 = parseInt(params.id, 10);
   const etablissementId2 = await etablissementIdDepuisEquipement(idNum2);
-  if (etablissementId2 === null || !(await peutEcrireEtablissement(etablissementId2))) {
+  if (etablissementId2 === null) {
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+  }
+  const raison = await raisonRefusEcriture(etablissementId2);
+  if (raison === 'essai_expire') {
+    return NextResponse.json(
+      { error: 'Votre période d\'essai est terminée. Abonnez-vous pour continuer à modifier vos données.', code: 'ESSAI_EXPIRE' },
+      { status: 403 }
+    );
+  }
+  if (raison === 'interdit') {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
   try {

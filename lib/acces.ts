@@ -16,16 +16,29 @@ export async function peutLireEtablissement(etablissementId: number): Promise<bo
 }
 
 export async function peutEcrireEtablissement(etablissementId: number): Promise<boolean> {
+  const raison = await raisonRefusEcriture(etablissementId);
+  return raison === null;
+}
+
+// Version détaillée : renvoie null si l'écriture est autorisée, sinon le motif
+// précis du refus. Utilisée par les routes d'écriture pour distinguer un vrai
+// problème d'accès ('interdit') d'un essai expiré ('essai_expire'), afin
+// d'afficher le bon message côté client (ex. bouton d'abonnement direct).
+export type RaisonRefusEcriture = 'interdit' | 'essai_expire';
+
+export async function raisonRefusEcriture(
+  etablissementId: number
+): Promise<RaisonRefusEcriture | null> {
   const session = lireSession();
-  if (!session) return false;
-  if (session.role === 'admin') return true;
+  if (!session) return 'interdit';
+  if (session.role === 'admin') return null;
 
   const { rows } = await sql`SELECT client_id FROM etablissements WHERE id = ${etablissementId}`;
-  if (rows.length === 0 || rows[0].client_id !== session.clientId) return false;
+  if (rows.length === 0 || rows[0].client_id !== session.clientId) return 'interdit';
 
   const { rows: compteRows } = await sql`SELECT statut FROM comptes WHERE id = ${session.compteId}`;
-  if (compteRows.length === 0) return false;
-  return compteRows[0].statut !== 'expire';
+  if (compteRows.length === 0) return 'interdit';
+  return compteRows[0].statut === 'expire' ? 'essai_expire' : null;
 }
 
 export async function etablissementIdDepuisEquipement(equipementId: number): Promise<number | null> {
