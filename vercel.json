@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/alertes",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/expirer-essais",
+      "schedule": "0 6 * * *"
     }
   ]
 }

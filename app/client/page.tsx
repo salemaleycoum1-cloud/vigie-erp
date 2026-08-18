@@ -7,6 +7,7 @@ import { lireSession } from '../../lib/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import AbonnementBouton from '../../components/AbonnementBouton';
+import { joursEssaiRestants } from '../../lib/acces';
 
 async function getEtablissementsClient(clientId: number) {
   const { rows } = await sql`
@@ -33,8 +34,11 @@ export default async function ClientAccueilPage() {
   }
 
   const etablissements = await getEtablissementsClient(session.clientId!);
-  const { rows: compteRows } = await sql`SELECT statut FROM comptes WHERE id = ${session.compteId}`;
+  const { rows: compteRows } = await sql`
+    SELECT statut, date_debut_essai FROM comptes WHERE id = ${session.compteId}
+  `;
   const statut = compteRows.length > 0 ? compteRows[0].statut : 'essai';
+  const joursRestants = compteRows.length > 0 ? joursEssaiRestants(compteRows[0].date_debut_essai) : null;
 
   return (
     <main>
@@ -44,8 +48,22 @@ export default async function ClientAccueilPage() {
       </p>
 
       {statut === 'essai' && (
-        <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-          Vous êtes en période d'essai. <AbonnementBouton />
+        <div
+          className={`mt-4 rounded-md border px-4 py-3 text-sm ${
+            joursRestants !== null && joursRestants <= 3
+              ? 'border-amber-200 bg-amber-50 text-amber-800'
+              : 'border-slate-200 bg-slate-50 text-slate-700'
+          }`}
+        >
+          {joursRestants !== null ? (
+            <>
+              Période d'essai : <strong>{joursRestants}</strong>{' '}
+              {joursRestants === 1 ? 'jour restant' : 'jours restants'}.
+            </>
+          ) : (
+            "Vous êtes en période d'essai."
+          )}{' '}
+          <AbonnementBouton />
         </div>
       )}
 

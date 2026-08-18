@@ -60,3 +60,15 @@ export async function etablissementIdDepuisFormation(formationRealiseeId: number
   `;
   return rows.length > 0 ? rows[0].etablissement_id : null;
 }
+
+// Nombre de jours d'essai restants avant expiration (durée alignée sur le cron
+// /api/cron/expirer-essais, qui bascule réellement le statut). Retourne null si
+// aucune date de début n'est connue. Ne descend jamais en dessous de 0.
+export const DUREE_ESSAI_JOURS = 14;
+
+export function joursEssaiRestants(dateDebutEssai: string | Date | null): number | null {
+  if (!dateDebutEssai) return null;
+  const debut = new Date(dateDebutEssai).getTime();
+  const joursEcoules = Math.floor((Date.now() - debut) / (24 * 60 * 60 * 1000));
+  return Math.max(0, DUREE_ESSAI_JOURS - joursEcoules);
+}
