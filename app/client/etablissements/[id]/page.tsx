@@ -17,6 +17,7 @@ import SupprimerFormation from '../../../etablissements/[id]/SupprimerFormation'
 import SuiviIndividuel from '../../../etablissements/[id]/SuiviIndividuel';
 import SuiviEPI from '../../../etablissements/[id]/SuiviEPI';
 import AbonnementBouton from '../../../../components/AbonnementBouton';
+import { joursEssaiRestants } from '../../../../lib/acces';
 
 async function getDetail(id: string) {
   const { rows: etabRows } = await sql`
@@ -85,8 +86,12 @@ export default async function ClientEtablissementPage({ params }: { params: { id
   if (!data) notFound();
   if (data.etablissement.client_id !== session.clientId) notFound();
 
-  const { rows: compteRows } = await sql`SELECT statut FROM comptes WHERE id = ${session.compteId}`;
+  const { rows: compteRows } = await sql`
+    SELECT statut, date_debut_essai FROM comptes WHERE id = ${session.compteId}
+  `;
   const lectureSeule = compteRows.length === 0 || compteRows[0].statut === 'expire';
+  const enEssai = compteRows.length > 0 && compteRows[0].statut === 'essai';
+  const joursEssaiRestantsVal = enEssai ? joursEssaiRestants(compteRows[0].date_debut_essai) : null;
 
   const { etablissement, equipements, echeances, typesControle, personnel, echeancesPersonnel, typesFormation, suiviIndividuel } = data;
 
@@ -109,6 +114,26 @@ export default async function ClientEtablissementPage({ params }: { params: { id
           <div className="mt-2">
             <AbonnementBouton />
           </div>
+        </div>
+      )}
+
+      {enEssai && (
+        <div
+          className={`mb-8 rounded-md border px-4 py-3 text-sm ${
+            joursEssaiRestantsVal !== null && joursEssaiRestantsVal <= 3
+              ? 'border-amber-200 bg-amber-50 text-amber-800'
+              : 'border-slate-200 bg-slate-50 text-slate-700'
+          }`}
+        >
+          {joursEssaiRestantsVal !== null ? (
+            <>
+              Période d'essai : <strong>{joursEssaiRestantsVal}</strong>{' '}
+              {joursEssaiRestantsVal === 1 ? 'jour restant' : 'jours restants'}.
+            </>
+          ) : (
+            "Vous êtes en période d'essai."
+          )}{' '}
+          <AbonnementBouton />
         </div>
       )}
 
