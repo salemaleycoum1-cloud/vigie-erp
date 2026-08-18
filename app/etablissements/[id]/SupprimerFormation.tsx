@@ -16,7 +16,17 @@ export default function SupprimerFormation({ formationRealiseeId }: { formationR
       return;
     }
     setLoading(true);
-    await fetch(`/api/formations/${formationRealiseeId}`, { method: 'DELETE' });
+    const res = await fetch(`/api/formations/${formationRealiseeId}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (data.code === 'ESSAI_EXPIRE') {
+        alert("Votre période d'essai est terminée. Abonnez-vous (bouton en haut de page) pour continuer à modifier vos données.");
+      } else {
+        alert(data.error || 'Erreur lors de la suppression');
+      }
+      setLoading(false);
+      return;
+    }
     window.location.reload();
   }
 

@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import MessageEssaiExpire from '../../../components/MessageEssaiExpire';
 
 const LIBELLES_EQUIPEMENT: Record<string, string> = {
   extincteur: 'Extincteur',
@@ -40,6 +41,8 @@ export default function AjouterEcheance({
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [organisme, setOrganisme] = useState('');
   const [loading, setLoading] = useState(false);
+  const [essaiExpire, setEssaiExpire] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
 
   const equipementChoisi = equipements.find((eq) => String(eq.id) === equipementId);
 
@@ -58,25 +61,47 @@ export default function AjouterEcheance({
     e.preventDefault();
     if (!equipementId || !typeControleId) return;
     setLoading(true);
-    await fetch(`/api/equipements/${equipementId}/controles`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type_controle_id: Number(typeControleId),
-        date_realisation: date,
-        organisme_agree: organisme || null,
-      }),
-    });
-    setLoading(false);
-    setOuvert(false);
-    setEquipementId('');
-    setTypeControleId('');
-    setOrganisme('');
-    window.location.reload();
+    setErreur(null);
+    try {
+      const res = await fetch(`/api/equipements/${equipementId}/controles`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type_controle_id: Number(typeControleId),
+          date_realisation: date,
+          organisme_agree: organisme || null,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (data.code === 'ESSAI_EXPIRE') {
+          setEssaiExpire(true);
+          setLoading(false);
+          return;
+        }
+        throw new Error(data.error || 'Erreur lors de l\'ajout');
+      }
+      setOuvert(false);
+      setEquipementId('');
+      setTypeControleId('');
+      setOrganisme('');
+      window.location.reload();
+    } catch (err: any) {
+      setErreur(err.message);
+      setLoading(false);
+    }
   }
 
   if (equipements.length === 0) {
     return null;
+  }
+
+  if (essaiExpire) {
+    return (
+      <div className="mt-2">
+        <MessageEssaiExpire />
+      </div>
+    );
   }
 
   if (!ouvert) {
@@ -170,6 +195,7 @@ export default function AjouterEcheance({
           Annuler
         </button>
       </div>
+      {erreur && <div className="rounded bg-red-50 px-2 py-1 text-xs text-red-700">{erreur}</div>}
     </form>
   );
 }

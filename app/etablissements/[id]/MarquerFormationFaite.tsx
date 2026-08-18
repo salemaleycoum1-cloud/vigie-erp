@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import MessageEssaiExpire from '../../../components/MessageEssaiExpire';
 
 export default function MarquerFormationFaite({
   personnelId,
@@ -15,22 +16,46 @@ export default function MarquerFormationFaite({
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [organisme, setOrganisme] = useState('');
   const [loading, setLoading] = useState(false);
+  const [essaiExpire, setEssaiExpire] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    await fetch(`/api/personnel/${personnelId}/formations`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type_formation_id: typeFormationId,
-        date_realisation: date,
-        organisme_agree: organisme || null,
-      }),
-    });
-    setLoading(false);
-    setOuvert(false);
-    window.location.reload();
+    setErreur(null);
+    try {
+      const res = await fetch(`/api/personnel/${personnelId}/formations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type_formation_id: typeFormationId,
+          date_realisation: date,
+          organisme_agree: organisme || null,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (data.code === 'ESSAI_EXPIRE') {
+          setEssaiExpire(true);
+          setLoading(false);
+          return;
+        }
+        throw new Error(data.error || 'Erreur lors de l\'enregistrement');
+      }
+      setOuvert(false);
+      window.location.reload();
+    } catch (err: any) {
+      setErreur(err.message);
+      setLoading(false);
+    }
+  }
+
+  if (essaiExpire) {
+    return (
+      <div className="mt-2">
+        <MessageEssaiExpire />
+      </div>
+    );
   }
 
   if (!ouvert) {

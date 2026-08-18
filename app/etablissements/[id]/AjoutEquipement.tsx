@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import MessageEssaiExpire from '../../../components/MessageEssaiExpire';
 
 const OPTIONS = [
   { value: 'extincteur', label: 'Extincteur' },
@@ -51,6 +52,8 @@ export default function AjoutEquipement({ etablissementId }: { etablissementId: 
   const [sousType, setSousType] = useState('co2');
   const [libelle, setLibelle] = useState('');
   const [loading, setLoading] = useState(false);
+  const [essaiExpire, setEssaiExpire] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
 
   const sousTypesDisponibles = SOUS_TYPES_PAR_TYPE[type] || [];
 
@@ -63,19 +66,41 @@ export default function AjoutEquipement({ etablissementId }: { etablissementId: 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    await fetch(`/api/etablissements/${etablissementId}/equipements`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type_equipement: type,
-        libelle,
-        sous_type: sousTypesDisponibles.length > 0 ? sousType : null,
-      }),
-    });
-    setLibelle('');
-    setOuvert(false);
-    setLoading(false);
-    window.location.reload();
+    setErreur(null);
+    try {
+      const res = await fetch(`/api/etablissements/${etablissementId}/equipements`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type_equipement: type,
+          libelle,
+          sous_type: sousTypesDisponibles.length > 0 ? sousType : null,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (data.code === 'ESSAI_EXPIRE') {
+          setEssaiExpire(true);
+          setLoading(false);
+          return;
+        }
+        throw new Error(data.error || 'Erreur lors de l\'ajout');
+      }
+      setLibelle('');
+      setOuvert(false);
+      window.location.reload();
+    } catch (err: any) {
+      setErreur(err.message);
+      setLoading(false);
+    }
+  }
+
+  if (essaiExpire) {
+    return (
+      <div className="mt-2">
+        <MessageEssaiExpire />
+      </div>
+    );
   }
 
   if (!ouvert) {
@@ -138,6 +163,7 @@ export default function AjoutEquipement({ etablissementId }: { etablissementId: 
           Annuler
         </button>
       </div>
+      {erreur && <div className="rounded bg-red-50 px-2 py-1 text-xs text-red-700">{erreur}</div>}
     </form>
   );
 }

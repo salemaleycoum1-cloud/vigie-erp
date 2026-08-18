@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import MessageEssaiExpire from '../../../components/MessageEssaiExpire';
 
 export default function MarquerFait({
   equipementId,
@@ -15,22 +16,38 @@ export default function MarquerFait({
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [organisme, setOrganisme] = useState('');
   const [loading, setLoading] = useState(false);
+  const [essaiExpire, setEssaiExpire] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    await fetch(`/api/equipements/${equipementId}/controles`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type_controle_id: typeControleId,
-        date_realisation: date,
-        organisme_agree: organisme || null,
-      }),
-    });
-    setLoading(false);
-    setOuvert(false);
-    window.location.reload();
+    setErreur(null);
+    try {
+      const res = await fetch(`/api/equipements/${equipementId}/controles`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type_controle_id: typeControleId,
+          date_realisation: date,
+          organisme_agree: organisme || null,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (data.code === 'ESSAI_EXPIRE') {
+          setEssaiExpire(true);
+          setLoading(false);
+          return;
+        }
+        throw new Error(data.error || 'Erreur lors de l\'enregistrement');
+      }
+      setOuvert(false);
+      window.location.reload();
+    } catch (err: any) {
+      setErreur(err.message);
+      setLoading(false);
+    }
   }
 
   if (!ouvert) {
@@ -41,6 +58,14 @@ export default function MarquerFait({
       >
         Marquer comme fait
       </button>
+    );
+  }
+
+  if (essaiExpire) {
+    return (
+      <div className="mt-2">
+        <MessageEssaiExpire />
+      </div>
     );
   }
 
@@ -83,6 +108,7 @@ export default function MarquerFait({
       >
         Annuler
       </button>
+      {erreur && <div className="w-full rounded bg-red-50 px-2 py-1 text-xs text-red-700">{erreur}</div>}
     </form>
   );
 }

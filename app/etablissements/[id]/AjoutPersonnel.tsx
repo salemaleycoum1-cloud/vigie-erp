@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import MessageEssaiExpire from '../../../components/MessageEssaiExpire';
 
 export default function AjoutPersonnel({ etablissementId }: { etablissementId: number }) {
   const router = useRouter();
@@ -9,20 +10,44 @@ export default function AjoutPersonnel({ etablissementId }: { etablissementId: n
   const [nom, setNom] = useState('');
   const [fonction, setFonction] = useState('');
   const [loading, setLoading] = useState(false);
+  const [essaiExpire, setEssaiExpire] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    await fetch(`/api/etablissements/${etablissementId}/personnel`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nom, fonction: fonction || null }),
-    });
-    setNom('');
-    setFonction('');
-    setOuvert(false);
-    setLoading(false);
-    window.location.reload();
+    setErreur(null);
+    try {
+      const res = await fetch(`/api/etablissements/${etablissementId}/personnel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nom, fonction: fonction || null }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (data.code === 'ESSAI_EXPIRE') {
+          setEssaiExpire(true);
+          setLoading(false);
+          return;
+        }
+        throw new Error(data.error || 'Erreur lors de l\'ajout');
+      }
+      setNom('');
+      setFonction('');
+      setOuvert(false);
+      window.location.reload();
+    } catch (err: any) {
+      setErreur(err.message);
+      setLoading(false);
+    }
+  }
+
+  if (essaiExpire) {
+    return (
+      <div className="mt-2">
+        <MessageEssaiExpire />
+      </div>
+    );
   }
 
   if (!ouvert) {
@@ -69,6 +94,7 @@ export default function AjoutPersonnel({ etablissementId }: { etablissementId: n
           Annuler
         </button>
       </div>
+      {erreur && <div className="rounded bg-red-50 px-2 py-1 text-xs text-red-700">{erreur}</div>}
     </form>
   );
 }
