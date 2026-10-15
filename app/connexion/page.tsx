@@ -2,11 +2,13 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function ConnexionPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [motDePasse, setMotDePasse] = useState('');
+  const [afficherMotDePasse, setAfficherMotDePasse] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -48,14 +50,31 @@ export default function ConnexionPage() {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700">Mot de passe</label>
-          <input
-            type="password"
-            value={motDePasse}
-            onChange={(e) => setMotDePasse(e.target.value)}
-            required
-            className="mt-1.5 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
-          />
+          <div className="flex items-center justify-between">
+            <label className="block text-sm font-medium text-slate-700">Mot de passe</label>
+            <Link
+              href="/mot-de-passe-oublie"
+              className="text-xs text-slate-600 hover:text-slate-900 underline"
+            >
+              Oublié ?
+            </Link>
+          </div>
+          <div className="relative mt-1.5">
+            <input
+              type={afficherMotDePasse ? 'text' : 'password'}
+              value={motDePasse}
+              onChange={(e) => setMotDePasse(e.target.value)}
+              required
+              className="block w-full rounded-md border border-slate-300 px-3 py-2 pr-10 text-sm focus:border-slate-500 focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => setAfficherMotDePasse(!afficherMotDePasse)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-500 hover:text-slate-700"
+            >
+              {afficherMotDePasse ? 'Masquer' : 'Voir'}
+            </button>
+          </div>
         </div>
 
         {erreur && (
