@@ -25,11 +25,11 @@ export async function POST(req: NextRequest) {
 
     const compte = rows[0];
     const resetToken = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 1000 * 60 * 60);
 
     await sql`
       UPDATE comptes
-      SET reset_token = ${resetToken}, reset_token_expires = ${expiresAt}
+      SET reset_token = ${resetToken},
+          reset_token_expires = NOW() + INTERVAL '1 hour'
       WHERE id = ${compte.id}
     `;
 
